@@ -14,14 +14,14 @@ const errorMiddleware = (err, req, res, next) => {
         // Mongoose Duplicate key -> Email is marked unique: true -> User tries to register with same email again
         if (err.code === 11000){
             const message = 'Duplicate field value entered';
-            error = new error(message);
+            error = new Error(message);
             error.statusCode = 400;
         }
 
         // Mongoose Validation Error -> When this happens ? -> Required field missing -> Email format wrong -> Password too short
         if (err.code === 'ValidationError') {
             const message = Object.values(err.errors).map(val => val.message);
-            error = new error(message.join(', '));
+            error = new Error(message.join(', '));
             error.statusCode = 400;
         }
         // Client never sees stack trace -> 👉 Only clean message
