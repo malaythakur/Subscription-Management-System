@@ -13,6 +13,7 @@ const {serve} = require('@upstash/workflow/express');
 // Import Subscription Mongoose model to interact with subscriptions collection
 import Subscription from '../models/subscription.model.js';
 
+import { sendReminderEmail } from '../utils/send-emaill.js';
 // Define how many days before renewal reminders should be sent
 const REMINDERS = [7,5,2,1];
 
@@ -35,7 +36,7 @@ export const sendReminders = serve(async(context)=>{
     if(renewalDate.isBefore(dayjs())){
 
         // Log that the workflow will stop because renewal date is in the past
-        console.log(`Renewal data has passed for subscription ${subscriptionId}. Stiopping workflow.`);
+        console.log(`Renewal data has passed for subscription ${subscriptionId}. Stopping workflow.`);
         return; 
     }
 
@@ -46,14 +47,22 @@ export const sendReminders = serve(async(context)=>{
          const reminderDate = renewalDate.subtract(daysBefore, 'day'); 
          // renewal date = 22feb , reminder date = 15 feb, 17, 20, 21
 
-        // If reminder date is still in the future, pause workflow until that date
-         if(reminderDate.isAfter(dayjs())){
+         // Skip reminders whose date has already passed (by day)
+        if (reminderDate.isBefore(dayjs(), 'day')) {
+            console.log(`Skipping ${daysBefore}-day reminder (already passed)`);
+            continue;
+    }
+
+        //  Wait until reminder date if it's in the future
+        if(reminderDate.isAfter(dayjs())){
             await sleepUntilReminder(context, `Reminder ${daysBefore} days before`, reminderDate);
          }
 
-        // Trigger the reminder action (email/SMS/push notification)
-         await triggerReminder(context, `Reminder ${daysBefore} days before`);
-    }
+        // Trigger reminder exactly once
+        await triggerReminder(context, `${daysBefore} days before reminder`, subscription);
+   
+        
+         }
 });
 
 // Fetch subscription data safely inside workflow execution
@@ -76,12 +85,19 @@ const sleepUntilReminder = async(context, label, date)=> {
 }
 
 // Trigger the reminder action inside a workflow-safe execution step
-const triggerReminder = async (context, label) => {
+const triggerReminder = async (context, label, subscription) => {
 
     // Execute reminder logic as a tracked workflow step
-    return await context.run(label, ()=> {
+    return await context.run(label, async()=> {
         // Log reminder trigger
         console.log(`Triggering ${label} reminder`);
         // Send Email, SMS, push notification...
+
+        await sendReminderEmail({
+            to: subscription.user.email,
+            type: label, 
+            subscription,
+
+        })
     })
 }
