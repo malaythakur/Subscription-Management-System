@@ -1,6 +1,6 @@
 # SubDub - Subscription Tracker API
 
-A comprehensive subscription management system built with Node.js, Express, and MongoDB. Track your subscriptions, get renewal reminders, and manage your recurring payments efficiently.
+A subscription management system built with Node.js, Express, and MongoDB. Track your subscriptions, get renewal reminders, and manage your recurring payments efficiently.
 
 ## 🚀 Features
 
@@ -87,11 +87,16 @@ The API will be available at `http://localhost:5500`
 
 ## 📚 API Documentation
 
+### Base URL
+```
+http://localhost:5500/api/v1
+```
+
 ### Authentication Endpoints
 
 #### Register User
 ```http
-POST /api/v1/auth/signup
+POST /api/v1/auth/sign-up
 Content-Type: application/json
 
 {
@@ -101,14 +106,85 @@ Content-Type: application/json
 }
 ```
 
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  }
+}
+```
+
 #### Login User
 ```http
-POST /api/v1/auth/signin
+POST /api/v1/auth/sign-in
 Content-Type: application/json
 
 {
   "email": "john@example.com",
   "password": "password123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "User signed in successfully",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  }
+}
+```
+
+### User Endpoints
+
+#### Get All Users
+```http
+GET /api/v1/users
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  ]
+}
+```
+
+#### Get User by ID
+```http
+GET /api/v1/users/:id
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
 }
 ```
 
@@ -131,10 +207,53 @@ Content-Type: application/json
 }
 ```
 
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439012",
+    "name": "Netflix",
+    "price": 15.99,
+    "currency": "USD",
+    "frequency": "monthly",
+    "category": "entertainment",
+    "paymentMethod": "Credit Card",
+    "status": "active",
+    "startDate": "2024-01-01T00:00:00.000Z",
+    "renewalDate": "2024-01-31T00:00:00.000Z",
+    "user": "507f1f77bcf86cd799439011"
+  },
+  "workflowRunId": "wfr_1234567890"
+}
+```
+
 #### Get User Subscriptions
 ```http
 GET /api/v1/subscriptions/user/:userId
 Authorization: Bearer <token>
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "name": "Netflix",
+      "price": 15.99,
+      "currency": "USD",
+      "frequency": "monthly",
+      "category": "entertainment",
+      "paymentMethod": "Credit Card",
+      "status": "active",
+      "startDate": "2024-01-01T00:00:00.000Z",
+      "renewalDate": "2024-01-31T00:00:00.000Z",
+      "user": "507f1f77bcf86cd799439011"
+    }
+  ]
+}
 ```
 
 ### Workflow Endpoints
@@ -145,9 +264,86 @@ POST /api/v1/workflows/subscription/reminder
 Content-Type: application/json
 
 {
-  "subscriptionId": "subscription_object_id"
+  "subscriptionId": "507f1f77bcf86cd799439012"
 }
 ```
+
+### Error Responses
+
+#### Validation Error (400)
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Please fill a valid email address"
+    }
+  ]
+}
+```
+
+#### Unauthorized (401)
+```json
+{
+  "success": false,
+  "message": "Unauthorized"
+}
+```
+
+#### Not Found (404)
+```json
+{
+  "success": false,
+  "message": "User not found"
+}
+```
+
+#### Conflict (409)
+```json
+{
+  "success": false,
+  "message": "User already exists"
+}
+```
+
+### Request Headers
+
+For protected routes, include the JWT token:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+### Supported Values
+
+#### Currency Options
+- `USD` - US Dollar
+- `EUR` - Euro
+- `GBP` - British Pound
+- `INR` - Indian Rupee
+
+#### Frequency Options
+- `daily` - Daily billing
+- `weekly` - Weekly billing
+- `monthly` - Monthly billing
+- `yearly` - Yearly billing
+
+#### Category Options
+- `sports` - Sports subscriptions
+- `news` - News subscriptions
+- `entertainment` - Entertainment subscriptions
+- `lifestyle` - Lifestyle subscriptions
+- `technology` - Technology subscriptions
+- `finance` - Finance subscriptions
+- `politics` - Politics subscriptions
+- `other` - Other categories
+
+#### Status Options
+- `active` - Active subscription
+- `cancelled` - Cancelled subscription
+- `expired` - Expired subscription
 
 ## 🗂️ Project Structure
 
@@ -288,34 +484,6 @@ EMAIL_PASSWORD="your_email_password"
 - Use `openssl rand -hex 64` to generate secure JWT secrets
 - Configure Arcjet for production IP handling
 
-### Docker Deployment (Optional)
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-## 🧪 Testing
-
-```bash
-# Run tests (when implemented)
-npm test
-
-# Run linting
-npx eslint .
-```
-
-## 📈 Monitoring and Logging
-
-- Request logging with Morgan
-- Error tracking and handling
-- Workflow execution monitoring via Upstash
-- Email delivery status tracking
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -324,28 +492,6 @@ npx eslint .
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the API endpoints
-
-## 🔄 Roadmap
-
-- [ ] Frontend dashboard
-- [ ] Mobile app integration
-- [ ] Advanced analytics
-- [ ] Multiple payment method tracking
-- [ ] Subscription cost optimization suggestions
-- [ ] Integration with banking APIs
-- [ ] Push notifications
-- [ ] Subscription sharing features
-
 ---
 
-**Built with ❤️ using Node.js and modern web technologies**
+**Built with Node.js and a production-grade backend stack**
